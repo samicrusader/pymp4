@@ -216,7 +216,8 @@ MP4ASampleEntryBox = Struct(
     "compression_id" / Default(Int16sb, 0),
     "packet_size" / Const(0, Int16ub),
     "sampling_rate" / Int16ub,
-    Padding(2)
+    Padding(2),
+    "sample_info" / LazyBound(lambda _: GreedyRange(Box))
 )
 
 AAVC = Struct(
@@ -579,14 +580,16 @@ SampleEncryptionBox = Struct(
         "has_subsample_encryption_info" / Flag,
         Padding(1)
     ),
-    "sample_encryption_info" / PrefixedArray(Int32ub, Struct(
+    "sample_encryption_info" / IfThenElse(this.flags.has_subsample_encryption_info, PrefixedArray(Int32ub, Struct(
         "iv" / Bytes(8),
         # include the sub sample encryption information
-        "subsample_encryption_info" / Default(If(this.flags.has_subsample_encryption_info, PrefixedArray(Int16ub, Struct(
+        "subsample_encryption_info" / PrefixedArray(Int16ub, Struct(
             "clear_bytes" / Int16ub,
             "cipher_bytes" / Int32ub
-        ))), None)
-    ))
+        )),
+    )), PrefixedArray(Int32ub, Struct(
+        "iv" / Bytes(8),
+    ))),
 )
 
 OriginalFormatBox = Struct(
